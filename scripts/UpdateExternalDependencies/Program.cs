@@ -13,6 +13,8 @@ namespace UpdateExternalDependencies
 {
     public static class Program
     {
+        private const string _depsFile = "";
+
         public static async Task Main(string[] args)
         {
             try
@@ -44,9 +46,7 @@ namespace UpdateExternalDependencies
         private static async Task<DependencyUpdateResults> UpdateFilesAsync()
         {
                 IEnumerable<IDependencyInfo> buildInfos = await GetBuildInfoAsync();
-                string sdkVersion = buildInfos.GetBuildVersion(SdkBuildInfoName);
-                string dockerfileVersion = sdkVersion.Substring(0, sdkVersion.LastIndexOf('.'));
-                IEnumerable<IDependencyUpdater> updaters = GetUpdaters(dockerfileVersion);
+                IEnumerable<IDependencyUpdater> updaters = GetUpdaters();
 
                 return DependencyUpdateUtils.Update(updaters, buildInfos);
         }
@@ -60,17 +60,8 @@ namespace UpdateExternalDependencies
             {
                 XDocument buildInfoXml = XDocument.Load(stream);
                 OrchestratedBuildModel buildInfo = OrchestratedBuildModel.Parse(buildInfoXml.Root);
-                BuildIdentity sdkBuild = buildInfo.Builds
-                    .First(build => string.Equals(build.Name, "cli", StringComparison.OrdinalIgnoreCase));
-                BuildIdentity coreSetupBuild = buildInfo.Builds
-                    .First(build => string.Equals(build.Name, "core-setup", StringComparison.OrdinalIgnoreCase));
 
-                return new[]
-                {
-                    // TODO use sdkBuild.ProductVersion once written to build-info
-                    CreateDependencyBuildInfo(SdkBuildInfoName, sdkBuild.BuildId),
-                    CreateDependencyBuildInfo(RuntimeBuildInfoName, coreSetupBuild.ProductVersion),
-                };
+                throw new NotImplementedException();
             };
         }
 
@@ -115,13 +106,14 @@ namespace UpdateExternalDependencies
 
         private static IEnumerable<IDependencyUpdater> GetUpdaters(string dockerfileVersion)
         {
-            string[] dockerfiles = Directory.GetFiles(
-                Path.Combine(RepoRoot, dockerfileVersion),
-                "Dockerfile",
-                SearchOption.AllDirectories);
 
-            Trace.TraceInformation("Updating the following Dockerfiles:");
-            Trace.TraceInformation(string.Join(Environment.NewLine, dockerfiles));
+            Trace.TraceInformation($"Updating {_depsFile}");
+
+            var depsUpdater = new FilePackageUpdater();
+
+            return new IDependencyUpdater[]{
+                depsUpdater
+            };
 
             return dockerfiles
                 .Select(path => CreateDockerfileEnvUpdater(path, "DOTNET_SDK_VERSION", SdkBuildInfoName))
