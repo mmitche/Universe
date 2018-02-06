@@ -1,4 +1,4 @@
-﻿
+
 using Microsoft.DotNet.VersionTools;
 using Microsoft.DotNet.VersionTools.Automation;
 using Microsoft.DotNet.VersionTools.BuildManifest.Model;
@@ -7,13 +7,18 @@ using Microsoft.DotNet.VersionTools.Dependencies.BuildOutput;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace UpdateExternalDependencies
 {
     public static class Program
     {
         private const string _depsFile = "";
+        private static Options Options { get; set; } = new Options();
 
         public static async Task Main(string[] args)
         {
@@ -34,7 +39,7 @@ namespace UpdateExternalDependencies
                     }
                 }
             }
-            catch (System.Exception)
+            catch (Exception e)
             {
                 Console.Error.WriteLine($"Failed to update dependencies:{Environment.NewLine}{e.ToString()}");
                 Environment.Exit(1);
@@ -104,21 +109,18 @@ namespace UpdateExternalDependencies
             return buildInfos.First(bi => bi.SimpleName == name).SimpleVersion;
         }
 
-        private static IEnumerable<IDependencyUpdater> GetUpdaters(string dockerfileVersion)
+        private static IEnumerable<IDependencyUpdater> GetUpdaters()
         {
-
             Trace.TraceInformation($"Updating {_depsFile}");
 
-            var depsUpdater = new FilePackageUpdater();
+            var depsUpdater = new DependenciesPropsDependencyUpdater
+            {
+                Path = _depsFile
+            };
 
             return new IDependencyUpdater[]{
                 depsUpdater
             };
-
-            return dockerfiles
-                .Select(path => CreateDockerfileEnvUpdater(path, "DOTNET_SDK_VERSION", SdkBuildInfoName))
-                .Concat(dockerfiles.Select(path => CreateDockerfileEnvUpdater(path, "DOTNET_VERSION", RuntimeBuildInfoName)))
-                .Concat(dockerfiles.Select(path => new DockerfileShaUpdater(path)));
         }
     }
 }
