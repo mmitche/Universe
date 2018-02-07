@@ -109,6 +109,10 @@ try {
                     }
                     catch {
                         Write-Warning "Error in pushing $($submodule.module): $_"
+                        $build_errors += @{
+                            Repo    = $submodule.module
+                            Message = $_
+                        }
                         continue
                     }
                 }
@@ -130,6 +134,10 @@ try {
     }
 
     if ($build_errors.Count -gt 0 ) {
+        Write-Error "The following repos failed:"
+        foreach ($error in $build_errors) {
+            Write-Error "   - $(error.Repo)"
+        }
         throw "Failed to build"
     }
 }
