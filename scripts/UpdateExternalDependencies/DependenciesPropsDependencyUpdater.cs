@@ -35,10 +35,9 @@ namespace UpdateExternalDependencies
 
             
             Action update = FileUtils.GetUpdateFileContentsTask(
-                ,
+                Path,
                 contents => ReplaceAllDependencyVersions(
                     contents,
-                    Path,
                     dependencyBuildInfos,
                     out dependencyChanges));
 
@@ -55,102 +54,41 @@ namespace UpdateExternalDependencies
         }
 
         private string ReplaceAllDependencyVersions(
-            string input,
-            string projectJsonFile,
-            IEnumerable<DependencyBuildInfo> buildInfos,
+            string dependencyPropsContent,
+            IEnumerable<IDependencyInfo> buildInfos,
             out IEnumerable<DependencyChange> dependencyChanges)
         {
-            JObject projectRoot = JObject.Parse(input);
+            var document = XDocument.Parse(dependencyPropsContent);
 
-            dependencyChanges = FindAllDependencyProperties(projectRoot)
-                    .Select(dependencyProperty => ReplaceDependencyVersion(projectJsonFile, dependencyProperty, buildInfos))
-                    .Where(buildInfo => buildInfo != null)
-                    .ToArray();
+            var depChanges = new List<DependencyChange>();
 
-            return JsonConvert.SerializeObject(projectRoot, Formatting.Indented) + Environment.NewLine;
-        }
-
-        /// <summary>
-        /// Replaces the single dependency with the updated version, if it matches any of the
-        /// dependencies that need to be updated. Stops on the first updated value found.
-        /// </summary>
-        /// <returns>The BuildInfo used to change the value, or null if there was no change.</returns>
-        private DependencyChange ReplaceDependencyVersion(
-            string projectJsonFile,
-            JProperty dependencyProperty,
-            IEnumerable<DependencyBuildInfo> parsedBuildInfos)
-        {
-            string id = dependencyProperty.Name;
-            foreach (DependencyBuildInfo info in parsedBuildInfos)
-            {
-                foreach (PackageIdentity packageInfo in info.Packages)
-                {
-                    if (id != packageInfo.Id)
-                    {
-                        continue;
-                    }
-
-                    string oldVersion;
-                    if (dependencyProperty.Value is JObject)
-                    {
-                        oldVersion = (string)dependencyProperty.Value["version"];
-                    }
-                    else
-                    {
-                        oldVersion = (string)dependencyProperty.Value;
-                    }
-                    VersionRange parsedOldVersionRange;
-                    if (!VersionRange.TryParse(oldVersion, out parsedOldVersionRange))
-                    {
-                        Trace.TraceWarning($"Couldn't parse '{oldVersion}' for package '{id}' in '{projectJsonFile}'. Skipping.");
-                        continue;
-                    }
-                    NuGetVersion oldNuGetVersion = parsedOldVersionRange.MinVersion;
-
-                    if (oldNuGetVersion == packageInfo.Version)
-                    {
-                        // Versions match, no update to make.
-                        continue;
-                    }
-
-                    if (oldNuGetVersion.IsPrerelease || info.UpgradeStableVersions)
-                    {
-                        string newVersion = packageInfo.Version.ToNormalizedString();
-                        if (dependencyProperty.Value is JObject)
-                        {
-                            dependencyProperty.Value["version"] = newVersion;
-                        }
-                        else
-                        {
-                            dependencyProperty.Value = newVersion;
-                        }
-
-                        return new DependencyChange
-                        {
-                            BuildInfo = info.BuildInfo,
-                            PackageId = id,
-                            Before = oldNuGetVersion,
-                            After = packageInfo.Version
-                        };
-                    }
-                }
-            }
-            return null;
-        }
-
-        private static IEnumerable<Dependency> FindAllDependencyProperties(XDocument dependencyProp)
-        {
-            var dependencies = new List<Dependency>();
-
-            var project = dependencyProp.Element("Project");
+            var project = document.Element("Project");
 
             foreach (var propGroup in project.Elements("PropertyGroup"))
             {
                 foreach (var depElement in propGroup.Descendants())
                 {
+                    var depName = depElement.Name;
+                    var depVersion = depElement.Value;
+                    var infos = buildInfos.Where(s => s.SimpleName == depName && s.SimpleVersion != depVersion);
+                    if(infos.Count() > 0)
+                    {
+                        var info = infos.First();
+                        depChanges.Add(new DependencyChange {
+                            PackageId = depName.LocalName,
+                            After = NuGetVersion.Parse(info.SimpleVersion),
+                            Before = NuGetVersion.Parse(depVersion),
+                            BuildInfo = info
+                        });
 
+                        depElement.Value = info.SimpleVersion;
+                    }
                 }
             }
+
+            dependencyChanges = depChanges;
+
+            return document.ToString();
         }
 
         private static string ReplaceGroupValue(
@@ -185,7 +123,7 @@ namespace UpdateExternalDependencies
 
         private class DependencyChange
         {
-            public BuildInfo BuildInfo { get; set; }
+            public IDependencyInfo BuildInfo { get; set; }
             public string PackageId { get; set; }
             public NuGetVersion Before { get; set; }
             public NuGetVersion After { get; set; }
@@ -193,7 +131,7 @@ namespace UpdateExternalDependencies
             public override string ToString()
             {
                 return $"'{PackageId} {Before.ToNormalizedString()}' must be " +
-                    $"'{After.ToNormalizedString()}' ({BuildInfo.Name})";
+                    $"'{After.ToNormalizedString()}' ({BuildInfo.SimpleName})";
             }
         }
     }

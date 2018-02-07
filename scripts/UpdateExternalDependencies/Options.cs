@@ -46,7 +46,7 @@ namespace UpdateExternalDependencies
                 syntax.DefineParameter(
                     "build-info",
                     ref buildInfoUrl,
-                    "URL of the build info to update the Dockerfiles with");
+                    "URL of the build info to update with");
                 BuildInfoUrl = buildInfoUrl;
             });
 

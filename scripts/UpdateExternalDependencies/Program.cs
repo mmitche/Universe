@@ -25,7 +25,7 @@ namespace UpdateExternalDependencies
             try
             {
                 Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
-
+                Options.Parse(args);
                 DependencyUpdateResults updateResults = await UpdateFilesAsync();
                 if (updateResults.ChangesDetected())
                 {
@@ -92,8 +92,7 @@ namespace UpdateExternalDependencies
                 BranchNamingStrategy = new SingleBranchNamingStrategy($"UpdateDependencies-{Options.GitHubUpstreamBranch}")
             };
 
-            string sdkVersion = updateResults.UsedInfos.GetBuildVersion(SdkBuildInfoName);
-            string commitMessage = $"Update {Options.GitHubUpstreamBranch} SDK to {sdkVersion}";
+            var commitMessage = $"Update {Options.GitHubUpstreamBranch} to latest.";
 
             await prCreator.CreateOrUpdateAsync(
                 commitMessage,
@@ -113,13 +112,8 @@ namespace UpdateExternalDependencies
         {
             Trace.TraceInformation($"Updating {_depsFile}");
 
-            var depsUpdater = new DependenciesPropsDependencyUpdater
-            {
-                Path = _depsFile
-            };
-
             return new IDependencyUpdater[]{
-                depsUpdater
+                new DependenciesPropsDependencyUpdater(_depsFile)
             };
         }
     }
