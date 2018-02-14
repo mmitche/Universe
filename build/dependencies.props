@@ -93,6 +93,7 @@
     <NewtonsoftJsonPackageVersion>10.0.1</NewtonsoftJsonPackageVersion>
     <NuGetFrameworksPackageVersion>4.7.0-preview1-4939</NuGetFrameworksPackageVersion>
     <OracleManagedDataAccessPackageVersion>12.2.1100</OracleManagedDataAccessPackageVersion>
+    <PollySignedPackageVersion>5.8.0</PollySignedPackageVersion>
     <RemotionLinqPackageVersion>2.2.0</RemotionLinqPackageVersion>
     <RuntimeLinuxArmMicrosoftNETCoreAppPackageVersion>2.1.0-preview2-26130-04</RuntimeLinuxArmMicrosoftNETCoreAppPackageVersion>
     <RuntimeLinuxArmMicrosoftNETCoreDotNetAppHostPackageVersion>2.1.0-preview2-26130-04</RuntimeLinuxArmMicrosoftNETCoreDotNetAppHostPackageVersion>
