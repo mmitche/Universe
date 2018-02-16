@@ -59,15 +59,22 @@
 
   <Target Name="GetFilesToPublish" DependsOnTargets="GetArtifactInfo;GeneratePublishFiles">
     <PropertyGroup>
-      <BlobBasePath>Runtime/$(PackageVersion)/</BlobBasePath>
-      <AliasBlobBasePath>Runtime/$(SharedFxCliBlobChannel)/</AliasBlobBasePath>
+      <BlobBasePath>aspnetcore/Runtime/$(PackageVersion)/</BlobBasePath>
+      <AliasBlobBasePath>aspnetcore/Runtime/$(SharedFxCliBlobChannel)/</AliasBlobBasePath>
       <PackageArchiveFileName>nuGetPackagesArchive-$(PackageVersion).lzma</PackageArchiveFileName>
       <InstallerBaseFileName>aspnetcore-runtime-$(PackageVersion)</InstallerBaseFileName>
       <InstallerAliasBaseFileName>aspnetcore-runtime-latest</InstallerAliasBaseFileName>
       <IntermediateInstallerBaseFileName>aspnetcore-runtime-internal-$(PackageVersion)</IntermediateInstallerBaseFileName>
+      <WindowsHostingBundleInstallerFileName>dotnet-hosting-$(PackageVersion)-win.exe</WindowsHostingBundleInstallerFileName>
     </PropertyGroup>
 
     <ItemGroup>
+      <!-- Windows Server hosting bundle -->
+      <FilesToPublish Include="$(DependencyAssetsDir)$(WindowsHostingBundleInstallerFileName)">
+        <RelativeBlobPath>$(BlobBasePath)$(WindowsHostingBundleInstallerFileName)</RelativeBlobPath>
+        <ManifestArtifactData>ShipInstaller=dotnetcli</ManifestArtifactData>
+      </FilesToPublish>
+
       <!-- Intermediate files passed on to the dotnet-CLI. -->
       <FilesToPublish Include="$(DependencyAssetsDir)$(PackageArchiveFileName)" >
         <RelativeBlobPath>$(BlobBasePath)$(PackageArchiveFileName)</RelativeBlobPath>
