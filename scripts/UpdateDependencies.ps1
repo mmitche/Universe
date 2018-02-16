@@ -3,10 +3,15 @@
 .PARAMETER BuildXml
     The URL or file path to a build.xml file that defines package versions to be used
 #>
-[CmdletBinding()]
+[CmdletBinding(SupportsShouldProcess = $true)]
 param(
     [Parameter(Mandatory = $true)]
-    $BuildXml
+    $BuildXml,
+    [string]$GitAuthorName = $null,
+    [string]$GitAuthorEmail = $null,
+    [string[]]$GitCommitArgs = @(),
+    [string]$TargetBranch = "dev",
+    [switch]$Force
 )
 
 $ErrorActionPreference = 'Stop'
@@ -36,15 +41,18 @@ foreach ($package in $remoteDeps.SelectNodes('//Package')) {
     Write-Verbose "Found {id: $packageId, version: $packageVersion, varName: $varName }"
 
     if ($variables[$varName]) {
-        $variables[$varName] += $packageVersion
-    } else {
+        if ($variables[$varName].Where( {$_ -eq $packageVersion}, 'First').Count -eq 0) {
+            $variables[$varName] += $packageVersion
+        }
+    }
+    else {
         $variables[$varName] = @($packageVersion)
     }
 }
 
 foreach ($varName in ($variables.Keys | sort)) {
     $packageVersions = $variables[$varName]
-    if ($packageVersions.Length -gt 1){
+    if ($packageVersions.Length -gt 1) {
         Write-Warning "Skipped $varName. Multiple version found. { $($packageVersions -join ', ') }."
         continue
     }
@@ -62,6 +70,23 @@ foreach ($varName in ($variables.Keys | sort)) {
 if ($count -gt 0) {
     Write-Host -f Cyan "Updating $count version variables in $depsPath"
     SaveXml $dependencies $depsPath
+
+    Invoke-Block { & git add $depsPath }
+
+    $gitConfigArgs = @()
+    if ($GitAuthorName) {
+        $gitConfigArgs += '-c', "user.name=$GitAuthorName"
+    }
+
+    if ($GitAuthorEmail) {
+        $gitConfigArgs += '-c', "user.email=$GitAuthorEmail"
+    }
+
+    Invoke-Block { & git @gitConfigArgs commit -m "Updating external dependencies" @GitCommitArgs }
+
+    if (($Force -or ($PSCmdlet.ShouldContinue($shortMessage, 'Push these changes?')))) {
+        Invoke-Block { & git push origin HEAD:$TargetBranch}
+    }
 }
 else {
     Write-Host -f Green "No changes found"
