@@ -91,6 +91,10 @@ param(
     [string[]]$MSBuildArguments
 )
 
+Write-Host -ForegroundColor Magenta "Package version props url: " + $PackageVersionPropsUrl.Substring(0, 1) + " blah blah " + $PackageVersionPropsUrl.Substring(1)
+Write-Host -ForegroundColor Magenta "Restore Sources url: " + $RestoreSources.Substring(0, 1) + " blah blah " + $RestoreSources.Substring(1)
+Write-Host -ForegroundColor Magenta "Asset root url: " + $AssetRootUrl.Substring(0, 1) + " blah blah " + $AssetRootUrl.Substring(1)
+
 Set-StrictMode -Version 2
 $ErrorActionPreference = 'Stop'
 
@@ -209,6 +213,7 @@ if ($PackageVersionPropsUrl) {
     $IntermediateDir = Join-Path $PSScriptRoot 'obj'
     $PropsFilePath = Join-Path $IntermediateDir 'external-dependencies.props'
     New-Item -ItemType Directory $IntermediateDir -ErrorAction Ignore | Out-Null
+    Write-Host -ForegroundColor Magenta "Downloading package version props: " + $PackageVersionPropsUrl.Substring(0, 1) + " blah blah " + $PackageVersionPropsUrl.Substring(1)
     Get-RemoteFile "${PackageVersionPropsUrl}${AccessTokenSuffix}" $PropsFilePath
     $MSBuildArguments += "-p:DotNetPackageVersionPropsPath=$PropsFilePath"
 }
